@@ -15,8 +15,7 @@ public class ClientHandler {
     public String getNickname() {
         return nickname;
     }
-
-    public ClientHandler(Server server, Socket socket) {
+    public ClientHandler(Server server, Socket socket, DataBaseSingleton dataBaseSingleton) {
         try {
             this.server = server;
             this.socket = socket;
@@ -29,7 +28,7 @@ public class ClientHandler {
                         // /auth login1 pass1
                         if (msg.startsWith("/auth ")) {
                             String[] tokens = msg.split("\\s");
-                            String nick = server.getAuthService().getNicknameByLoginAndPassword(tokens[1], tokens[2]);
+                            String nick = dataBaseSingleton.getNicknameOrNull(tokens[1], tokens[2]);
                             if (nick != null && !server.isNickBusy(nick)) {
                                 sendMsg("/authok " + nick);
                                 nickname = nick;
@@ -48,6 +47,14 @@ public class ClientHandler {
                             if(msg.startsWith("/w ")) {
                                 String[] tokens = msg.split("\\s", 3);
                                 server.privateMsg(this, tokens[1], tokens[2]);
+                            }
+                            if(msg.startsWith("/change ")) {
+                                String[] tokens = msg.split("\\s", 3);
+                                boolean success = dataBaseSingleton.updateNickname(nickname, tokens[1]);
+                                if (success) {
+                                    server.broadcastMsg("user " + nickname + " changed nickname to " + tokens[1]);
+                                    nickname = tokens[1];
+                                }
                             }
                         } else {
                             server.broadcastMsg(nickname + ": " + msg);

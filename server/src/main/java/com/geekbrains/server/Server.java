@@ -1,29 +1,29 @@
 package com.geekbrains.server;
 
-import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Vector;
 
 public class Server {
     private Vector<ClientHandler> clients;
-    private AuthService authService;
+    private DataBaseSingleton dataBaseSingleton;
 
-    public AuthService getAuthService() {
-        return authService;
+    public DataBaseSingleton getDataBaseSingleton() {
+        return dataBaseSingleton;
     }
 
     public Server() {
         clients = new Vector<>();
-        authService = new SimpleAuthService();
-        try (ServerSocket serverSocket = new ServerSocket(8189)) {
+
+        try (DataBaseSingleton dataBaseSingleton = DataBaseSingleton.getDataBaseSingleton();
+        ServerSocket serverSocket = new ServerSocket(8189)) {
             System.out.println("Сервер запущен на порту 8189");
             while (true) {
                 Socket socket = serverSocket.accept();
-                new ClientHandler(this, socket);
+                new ClientHandler(this, socket, dataBaseSingleton);
                 System.out.println("Подключился новый клиент");
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         System.out.println("Сервер завершил свою работу");
