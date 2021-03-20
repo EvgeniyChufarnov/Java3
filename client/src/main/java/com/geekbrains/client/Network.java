@@ -4,6 +4,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Iterator;
+import java.util.List;
 
 public class Network {
     private static Socket socket;
@@ -14,6 +16,9 @@ public class Network {
     private static Callback callOnAuthenticated;
     private static Callback callOnException;
     private static Callback callOnCloseConnection;
+
+    private static LocalHistoryHandler localHistoryHandler = LocalHistoryHandler.getLocalHistoryHandler();
+    private static String lastLogin;
 
     static {
         Callback empty = args -> { };
@@ -45,6 +50,7 @@ public class Network {
                 connect();
             }
             out.writeUTF("/auth " + login + " " + password);
+            lastLogin = login;
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -61,15 +67,20 @@ public class Network {
                         String msg = in.readUTF();
                         if (msg.startsWith("/authok ")) {
                             callOnAuthenticated.callback(msg.split("\\s")[1]);
+                            localHistoryHandler.setLocalPath(lastLogin);
                             break;
                         }
                     }
+                    getLocalHistory();
                     while (true) {
                         String msg = in.readUTF();
                         if (msg.equals("/end")) {
                             break;
                         }
                         callOnMsgReceived.callback(msg);
+                        if (!msg.startsWith("/clients")) {
+                            localHistoryHandler.writeLine(msg);
+                        }
                     }
                 } catch (IOException e) {
                     callOnException.callback("Соединение с сервером разорвано");
@@ -81,6 +92,17 @@ public class Network {
             clientListenerThread.start();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private static void getLocalHistory() {
+        List<String> history = localHistoryHandler.getHistory();
+        Iterator<String> iterator = history.iterator();
+
+        int i = 0;
+
+        while (iterator.hasNext() && i++ < 100) {
+            callOnMsgReceived.callback(iterator.next());
         }
     }
 
