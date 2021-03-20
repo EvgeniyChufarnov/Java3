@@ -17,7 +17,7 @@ public class Network {
     private static Callback callOnException;
     private static Callback callOnCloseConnection;
 
-    private static LocalHistoryHandler localHistoryHandler = LocalHistoryHandler.getLocalHistoryHandler();
+    private static LocalHistoryHandler localHistoryHandler;
     private static String lastLogin;
 
     static {
@@ -45,6 +45,7 @@ public class Network {
     }
 
     public static void sendAuth(String login, String password) {
+        localHistoryHandler = LocalHistoryHandler.getLocalHistoryHandler();
         try {
             if (socket == null || socket.isClosed()) {
                 connect();
