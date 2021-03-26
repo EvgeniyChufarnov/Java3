@@ -3,10 +3,13 @@ package com.geekbrains.server;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Vector;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Server {
     private Vector<ClientHandler> clients;
     private DataBaseSingleton dataBaseSingleton;
+    private ExecutorService executorService;
 
     public DataBaseSingleton getDataBaseSingleton() {
         return dataBaseSingleton;
@@ -14,18 +17,21 @@ public class Server {
 
     public Server() {
         clients = new Vector<>();
+        executorService = Executors.newCachedThreadPool();
 
         try (DataBaseSingleton dataBaseSingleton = DataBaseSingleton.getDataBaseSingleton();
         ServerSocket serverSocket = new ServerSocket(8189)) {
             System.out.println("Сервер запущен на порту 8189");
             while (true) {
                 Socket socket = serverSocket.accept();
-                new ClientHandler(this, socket, dataBaseSingleton);
+                ClientHandler client = new ClientHandler(this, socket, dataBaseSingleton);
+                executorService.execute(client);
                 System.out.println("Подключился новый клиент");
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+        executorService.shutdown();
         System.out.println("Сервер завершил свою работу");
     }
 
