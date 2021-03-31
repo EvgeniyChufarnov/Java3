@@ -1,12 +1,19 @@
 package com.geekbrains.server;
 
+import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Server {
+    private static final Logger LOGGER = Logger.getLogger("");
+
     private Vector<ClientHandler> clients;
     private DataBaseSingleton dataBaseSingleton;
     private ExecutorService executorService;
@@ -15,24 +22,39 @@ public class Server {
         return dataBaseSingleton;
     }
 
+    public static Logger getLOGGER() {
+        return LOGGER;
+    }
+
     public Server() {
         clients = new Vector<>();
         executorService = Executors.newCachedThreadPool();
+        setFileHandler();
 
         try (DataBaseSingleton dataBaseSingleton = DataBaseSingleton.getDataBaseSingleton();
         ServerSocket serverSocket = new ServerSocket(8189)) {
-            System.out.println("Сервер запущен на порту 8189");
+            LOGGER.log(Level.INFO, "Сервер запущен на порту 8189");
             while (true) {
                 Socket socket = serverSocket.accept();
                 ClientHandler client = new ClientHandler(this, socket, dataBaseSingleton);
                 executorService.execute(client);
-                System.out.println("Подключился новый клиент");
+                LOGGER.log(Level.INFO, "Подключился новый клиент");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, e.getMessage());
         }
         executorService.shutdown();
-        System.out.println("Сервер завершил свою работу");
+        LOGGER.log(Level.INFO, "Сервер завершил свою работу");
+    }
+
+    private void setFileHandler() {
+        try {
+            Handler fileHandler = new FileHandler("log_%g.txt", 1024, 10, true);
+            LOGGER.addHandler(fileHandler);
+            LOGGER.setLevel(Level.INFO);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void broadcastMsg(String msg) {
