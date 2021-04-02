@@ -4,6 +4,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ClientHandler implements Runnable {
     private String nickname;
@@ -12,6 +14,7 @@ public class ClientHandler implements Runnable {
     private DataInputStream in;
     private DataOutputStream out;
     private final DataBaseSingleton dataBaseSingleton;
+    private final Logger logger;
 
     private Boolean isAuthorised = false;
     private Boolean isStopped = false;
@@ -21,6 +24,7 @@ public class ClientHandler implements Runnable {
     }
     public ClientHandler(Server server, Socket socket, DataBaseSingleton dataBaseSingleton) {
         this.dataBaseSingleton = dataBaseSingleton;
+        this.logger = Server.getLOGGER();
         init(server, socket);
     }
 
@@ -31,7 +35,7 @@ public class ClientHandler implements Runnable {
             this.in = new DataInputStream(socket.getInputStream());
             this.out = new DataOutputStream(socket.getOutputStream());
         } catch (IOException e) {
-            e.printStackTrace();
+            logExceptionInfo(e);
         }
     }
 
@@ -45,7 +49,7 @@ public class ClientHandler implements Runnable {
                 receiveMessage();
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logExceptionInfo(e);
         } finally {
             ClientHandler.this.disconnect();
         }
@@ -69,6 +73,7 @@ public class ClientHandler implements Runnable {
     private void receiveMessage() throws IOException {
         String msg = in.readUTF();
         if(msg.startsWith("/")) {
+            logger.log(Level.FINE, String.format("Клиент %s прислал команду: %s", nickname, msg));
             if (msg.equals("/end")) {
                 sendMsg("/end");
                 isStopped = true;
@@ -86,6 +91,7 @@ public class ClientHandler implements Runnable {
                 }
             }
         } else {
+            logger.log(Level.FINE, String.format("Клиент %s прислал сообщение: %s", nickname, msg));
             server.broadcastMsg(nickname + ": " + msg);
         }
     }
@@ -94,7 +100,7 @@ public class ClientHandler implements Runnable {
         try {
             out.writeUTF(msg);
         } catch (IOException e) {
-            e.printStackTrace();
+            logExceptionInfo(e);
         }
     }
 
@@ -103,17 +109,21 @@ public class ClientHandler implements Runnable {
         try {
             in.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            logExceptionInfo(e);
         }
         try {
             out.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            logExceptionInfo(e);
         }
         try {
             socket.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            logExceptionInfo(e);
         }
+    }
+
+    private void logExceptionInfo(Exception e) {
+        logger.log(Level.SEVERE, String.format("Клиент %s: Ошибка: %s", nickname, e.getMessage()));
     }
 }
